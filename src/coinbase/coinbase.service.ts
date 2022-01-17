@@ -1,13 +1,18 @@
+import { UsersService } from './../users/users.service';
 import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Response } from 'express';
+import { Response, Request } from 'express';
+import { EncryptionService } from 'src/auth/encryption.service';
+import { UserResponse } from 'src/users/dto/response/userResponse.dto';
 
 @Injectable()
 export class CoinbaseService {
   constructor(
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
+    private readonly usersService: UsersService,
+    private readonly encryptionService: EncryptionService,
   ) {}
 
   private buildAuthorizeUrl() {
@@ -48,8 +53,30 @@ export class CoinbaseService {
     const { code } = req.query;
     const { user } = req;
 
-    this.getTokensFromCode(code as string).subscribe(
-      async (tokenResponse) => {},
-    );
+    this.getTokensFromCode(code as string).subscribe(async (tokenResponse) => {
+      await this.updateUserCoinbaseAuth(
+        tokenResponse.data,
+        (user as unknown as UserResponse)._id,
+      );
+      res.redirect(this.configService.get('AUTH_REDIRECT_URI'));
+    });
+  }
+
+  private async updateUserCoinbaseAuth(tokenPayload: any, userId: string) {
+    const {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      expires_in: expiresIn,
+    } = tokenPayload;
+
+    const expires = new Date();
+    expires.setSeconds(expires.getSeconds() + expiresIn);
+    await this.usersService.updateUser(userId, {
+      coinbaseAuth: {
+        accessToken: this.encryptionService.encrypt(accessToken),
+        refreshToken: this.encryptionService.encrypt(refreshToken),
+        expires,
+      },
+    });
   }
 }

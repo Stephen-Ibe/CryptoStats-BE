@@ -15,6 +15,10 @@ export class UsersRepository {
     return user.save();
   }
 
+  async updateOne(userId: string, data: Partial<User>) {
+    return this.user.findByIdAndUpdate(userId, data, { new: true });
+  }
+
   async findOneByEmail(email: string): Promise<User> {
     return this.user.findOne({ email });
   }

@@ -15,5 +15,7 @@ export class CoinbaseController {
 
   @Get('auth/callback')
   @UseGuards(JwtAuthGuard)
-  handleCallback(@Res() request: Request, @Res() reponse: Response): void {}
+  handleCallback(@Res() request: Request, @Res() response: Response): void {
+    this.coinbaseService.handleCallback(request, response);
+  }
 }
